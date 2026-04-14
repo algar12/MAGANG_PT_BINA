@@ -184,28 +184,125 @@ Penelitian ini menggunakan pendekatan **Research and Development (R&D)** dengan 
 
 ### 3.2 Alat dan Bahan
 
-#### Hardware
+#### 🧰 A. Perangkat Utama (Wajib)
 
-| Komponen | Spesifikasi | Fungsi |
-|---|---|---|
-| ESP32 DevKit | Espressif ESP32-WROOM-32 | Mikrokontroler utama |
-| Load Cell | 5 kg / 10 kg | Sensor berat |
-| HX711 | Modul ADC 24-bit | Konverter data sensor |
-| Kamera | Webcam USB / HP via IP Camera | Input visual |
-| Power Supply | 5V 2A | Sumber daya ESP32 |
-| PC / Laptop | Min. 8 GB RAM | Server AI + backend |
+**1. Timbangan Digital**
 
-#### Software
+- **Fungsi:** Mengukur berat barang secara akurat
+- **Kriteria pemilihan:**
+  - Memiliki port **RS232 atau USB** untuk komunikasi serial (lebih mudah diintegrasikan)
+  - Jika tidak ada port RS232 → gunakan **Load Cell + HX711** sebagai alternatif
+- **Kapasitas:** 5 kg atau 10 kg (disesuaikan kebutuhan)
+
+**2. ESP32 DevKit (Mikrokontroler Utama)**
+
+| Spesifikasi | Nilai |
+|---|---|
+| Model | Espressif ESP32-WROOM-32 |
+| Prosesor | Dual-core Xtensa LX6, 240 MHz |
+| RAM | 520 KB SRAM |
+| Konektivitas | WiFi 802.11 b/g/n + Bluetooth 4.2 |
+| UART | Banyak port UART (cocok multi-device) |
+| Harga estimasi | Rp 45.000 – Rp 85.000 |
+
+- **Fungsi:**
+  - Membaca data berat dari timbangan via serial (RS232/UART)
+  - Mengirimkan data ke server via WiFi (HTTP/JSON)
+- **Alasan dipilih:** WiFi built-in kuat, banyak UART, komunitas besar, dan harga terjangkau — ideal untuk IoT
+
+**3. Kamera (HP Lama sebagai IP Camera)**
+
+- **Contoh:** Xiaomi Redmi 4X atau smartphone Android setara
+- **Fungsi:**
+  - Mengambil gambar/video objek yang ada di atas timbangan
+  - Menjadi input utama untuk sistem *Computer Vision*
+- **Aplikasi:** **IP Webcam** (Android) → streaming RTSP ke server AI
+- **Resolusi minimum:** 720p
+
+**4. Server / PC / Laptop**
+
+- **Fungsi:**
+  - Menjalankan AI processing (OpenCV + YOLOv8)
+  - Menjalankan Laravel backend + database MySQL
+  - Menyimpan semua data transaksi
+- **Spesifikasi minimum:** RAM 8 GB, CPU modern (GPU opsional untuk training)
+
+---
+
+#### 🔌 B. Perangkat Tambahan (Penting)
+
+**1. Converter RS232 ke TTL (MAX3232 / MAX232)**
+
+- **Fungsi:** Menjembatani komunikasi timbangan (RS232 level ±12V) ke ESP32 (TTL level 3.3V)
+- **Model yang direkomendasikan:** MAX3232 (lebih kompatibel dengan ESP32 3.3V)
+- **Diperlukan jika:** timbangan memiliki port RS232 dan akan dihubungkan langsung ke ESP32
+
+**2. HX711 + Load Cell (Alternatif tanpa port RS232)**
+
+- **Fungsi:** Membaca data berat langsung dari sensor Load Cell (tanpa timbangan digital berport)
+- **Resolusi ADC:** 24-bit precision
+- **Kapasitas Load Cell:** 5 kg / 10 kg
+- **Kegunaan:** Solusi jika timbangan tidak memiliki output digital; lebih fleksibel untuk prototipe DIY
+
+**3. Router / Access Point WiFi**
+
+- **Fungsi:** Menghubungkan semua perangkat (ESP32, kamera, server, client browser) dalam satu jaringan lokal
+- **Persyaratan:** WiFi 2.4 GHz (ESP32 hanya mendukung 2.4 GHz)
+
+---
+
+#### 🧠 C. Software yang Digunakan
+
+**Backend & Database:**
 
 | Software | Versi | Fungsi |
 |---|---|---|
-| Arduino IDE | 2.x | Pemrograman ESP32 |
-| Python | 3.11 | AI processing server |
-| YOLOv8 (Ultralytics) | 8.x | Model deteksi objek |
+| Laravel | 11.x | Backend, REST API, & dashboard web |
+| MySQL | 8.0 | Database relasional |
+| PHP | 8.2+ | Bahasa server-side |
+
+**Computer Vision & AI:**
+
+| Software | Versi | Fungsi |
+|---|---|---|
+| Python | 3.11 | Runtime AI processing server |
+| YOLOv8 (Ultralytics) | 8.x | Model deteksi objek real-time |
 | OpenCV | 4.8+ | Capture & preprocessing gambar |
-| Laravel | 11.x | Backend & dashboard web |
-| MySQL | 8.0 | Database |
-| Roboflow | - | Anotasi dataset |
+| Roboflow | - | Anotasi dan augmentasi dataset |
+
+**Pemrograman IoT:**
+
+| Software | Fungsi |
+|---|---|
+| Arduino IDE 2.x / PlatformIO | Pemrograman dan upload firmware ESP32 |
+| IP Webcam (Android App) | Streaming kamera HP ke server via RTSP |
+| Postman | Testing REST API endpoint |
+
+---
+
+#### 📊 D. Teknologi Opsional (Pengembangan Lanjutan)
+
+| Teknologi | Manfaat |
+|---|---|
+| **MQTT** (Mosquitto) | Komunikasi IoT real-time yang lebih ringan dan efisien |
+| **Node-RED** | Visual flow programming untuk orkestrasi data antar device |
+| **Cloudflare Tunnel** | Akses dashboard web dari internet tanpa IP publik |
+| **Filament (Laravel)** | Admin panel yang lebih kaya fitur dan modern |
+
+---
+
+#### 🎯 E. Rangkuman Kebutuhan Minimum
+
+| Komponen | Ketersediaan | Estimasi Harga |
+|---|---|---|
+| Timbangan digital | Beli / pinjam | Rp 150.000 – Rp 500.000 |
+| ESP32 DevKit | Beli | Rp 45.000 – Rp 85.000 |
+| Converter RS232 (MAX3232) | Beli | Rp 8.000 – Rp 20.000 |
+| HX711 + Load Cell | Beli (alternatif) | Rp 25.000 – Rp 50.000 |
+| HP kamera (Redmi 4X dll) | Sudah dimiliki | - |
+| Router WiFi | Sudah dimiliki | - |
+| Laptop / PC | Sudah dimiliki | - |
+| **Total estimasi** | | **~Rp 230.000 – Rp 655.000** |
 
 ---
 

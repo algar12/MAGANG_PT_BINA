@@ -60,12 +60,12 @@ flowchart TD
     Start(["🟢 Mulai"])
     A["Operator meletakkan barang\ndi atas timbangan"]
     B["ESP32 membaca data berat\ndari sensor Load Cell + HX711"]
-    C{Berat stabil\n>= threshold?}
+    C{Berat stabil\n≥ threshold?}
     D["ESP32 mengirim data berat\nke server via HTTP/JSON"]
     E["Kamera mengambil\ngambar barang"]
     F["OpenCV memproses\ngambar (resize, normalize)"]
     G["YOLOv8 mendeteksi\njenis barang"]
-    H{Confidence\n>= 70%?}
+    H{Confidence\n≥ 70%?}
     I["Tandai sebagai 'Tidak Dikenal'\n(Unknown)"]
     J["Ambil harga dari\ndatabase Laravel"]
     K["Hitung total harga:\nBerat × Harga/kg"]
@@ -343,7 +343,7 @@ flowchart TD
     E["Load pretrained YOLOv8m.pt\n(Transfer Learning)"]
     F["Training model\nepochs=100, batch=16, imgsz=640"]
     G["Evaluasi val set\n(mAP, Precision, Recall)"]
-    H{mAP@50\n>= 85%?}
+    H{"mAP@50 ≥ 85%?"}
     I["Hyperparameter tuning\n(learning rate, augmentation)"]
     J["Evaluasi test set final"]
     K["Export model\n(.pt → ONNX / TFLite)"]
