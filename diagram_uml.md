@@ -222,17 +222,39 @@ erDiagram
         varchar email
         varchar password
         enum role
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    CATEGORIES {
+        bigint id PK
+        varchar name
+        varchar slug
         timestamp created_at
         timestamp updated_at
     }
 
     PRODUCTS {
         bigint id PK
+        bigint category_id FK
         varchar name
-        varchar category
-        decimal price_per_kg
         varchar yolo_class
+        decimal price_per_kg
+        varchar unit
         varchar image_path
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DEVICES {
+        bigint id PK
+        varchar device_id
+        varchar name
+        varchar location
+        varchar firmware_version
+        timestamp last_online_at
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -240,10 +262,14 @@ erDiagram
 
     WEIGHING_SESSIONS {
         bigint id PK
+        bigint device_id FK
         bigint product_id FK
         decimal weight_kg
-        varchar detected_image
+        decimal raw_weight_data
+        varchar detected_class
         decimal confidence_score
+        varchar detected_image
+        decimal price_per_kg
         decimal total_price
         enum status
         timestamp created_at
@@ -254,24 +280,45 @@ erDiagram
         bigint id PK
         bigint session_id FK
         bigint operator_id FK
-        varchar payment_method
+        varchar invoice_number
+        enum payment_method
         decimal total_amount
+        decimal amount_paid
+        decimal change_amount
         text notes
         timestamp created_at
+        timestamp updated_at
     }
 
     DEVICE_LOGS {
         bigint id PK
-        varchar device_id
+        bigint device_id FK
         decimal raw_weight
-        int signal_strength
+        smallint signal_strength
         varchar ip_address
+        enum log_type
+        text message
         timestamp created_at
     }
 
-    USERS ||--o{ TRANSACTIONS : "mencatat"
-    PRODUCTS ||--o{ WEIGHING_SESSIONS : "terdeteksi sebagai"
-    WEIGHING_SESSIONS ||--|| TRANSACTIONS : "dikonfirmasi menjadi"
+    PRICE_HISTORIES {
+        bigint id PK
+        bigint product_id FK
+        bigint changed_by FK
+        decimal old_price
+        decimal new_price
+        varchar reason
+        timestamp created_at
+    }
+
+    CATEGORIES ||--o{ PRODUCTS          : "memiliki"
+    PRODUCTS   ||--o{ WEIGHING_SESSIONS : "teridentifikasi dalam"
+    DEVICES    ||--o{ WEIGHING_SESSIONS : "menghasilkan"
+    DEVICES    ||--o{ DEVICE_LOGS       : "mencatat log"
+    WEIGHING_SESSIONS ||--|| TRANSACTIONS  : "dikonfirmasi menjadi"
+    USERS      ||--o{ TRANSACTIONS      : "dikonfirmasi oleh"
+    PRODUCTS   ||--o{ PRICE_HISTORIES   : "memiliki riwayat harga"
+    USERS      ||--o{ PRICE_HISTORIES   : "diubah oleh"
 ```
 
 ---
