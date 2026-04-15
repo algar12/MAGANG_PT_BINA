@@ -1,6 +1,4 @@
-Oke, sekarang kita ubah semua jadi **bentuk ide konsep (bukan teknis step-by-step)** — biar kamu bisa pakai untuk proposal, PKM, atau skripsi 🔥
 
----
 
 # 💡 IDE PROYEK
 

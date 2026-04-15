@@ -1,4 +1,4 @@
-Berikut daftar **alat (hardware + software)** yang dibutuhkan untuk merealisasikan ide **Smart Timbangan + Computer Vision + IoT** kamu 🔥
+Berikut daftar **alat (hardware + software)** yang dibutuhkan untuk merealisasikan ide **Smart Timbangan + Computer Vision + IoT** 
 
 ---
 
@@ -222,12 +222,3 @@ yang bisa:
 
 ---
 
-## 🚀 Mau lanjut?
-
-Aku bisa bantu kamu ke tahap berikutnya:
-
-* 🔧 Estimasi biaya lengkap (RAB proyek)
-* 🧠 Pilih model AI (buah, sayur, dll)
-* 📄 Diagram blok + flowchart buat laporan
-
-Tinggal bilang: **"buatkan RAB"** atau **"lanjut diagram blok"** 📘
