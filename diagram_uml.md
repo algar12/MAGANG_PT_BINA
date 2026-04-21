@@ -42,17 +42,6 @@ graph TD
         O -..->|Live Update Tabel Costing| M
     end
 
-    classDef hardware fill:#f9a8d4,stroke:#be185d,stroke-width:2px;
-    classDef software fill:#bfdbfe,stroke:#1d4ed8,stroke-width:2px;
-    classDef database fill:#bbf7d0,stroke:#15803d,stroke-width:2px;
-    classDef network fill:#fef08a,stroke:#a16207,stroke-width:2px;
-    classDef filament fill:#e9d5ff,stroke:#7e22ce,stroke-width:2px;
-
-    class A,B,C,D hardware;
-    class F,H,J,K,L,M,N software;
-    class G,I database;
-    class E network;
-    class O filament;
 ```
 
 ---
