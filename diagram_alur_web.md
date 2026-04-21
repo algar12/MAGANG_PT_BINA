@@ -7,22 +7,22 @@ Dokumen ini menggambarkan alur web terbaru pada aplikasi Smart Timbangan berbasi
 ## 1. Use Case Diagram
 
 ```mermaid
-usecaseDiagram
-    actor Admin as "Admin / Operator"
-    actor Device as "ESP32 / Timbangan"
+flowchart LR
+    Admin["Admin / Operator"]
+    Device["ESP32 / Timbangan"]
 
-    rectangle "Web Smart Timbangan" {
-        usecase UC1 as "Login Panel Admin"
-        usecase UC2 as "Kelola Bahan Baku"
-        usecase UC3 as "Kelola Alat Timbangan"
-        usecase UC4 as "Mulai Menimbang"
-        usecase UC5 as "Generate Nomor Otomatis"
-        usecase UC6 as "Pilih Bahan Baku"
-        usecase UC7 as "Simpan Hasil Timbang"
-        usecase UC8 as "Filter Data per Hari/Bulan/Tahun"
-        usecase UC9 as "Export Excel per Hari/Bulan/Tahun"
-        usecase UC10 as "Kirim Berat Aktual"
-    }
+    subgraph Web["Web Smart Timbangan"]
+        UC1((Login Panel Admin))
+        UC2((Kelola Bahan Baku))
+        UC3((Kelola Alat Timbangan))
+        UC4((Mulai Menimbang))
+        UC5((Generate Nomor Otomatis))
+        UC6((Pilih Bahan Baku))
+        UC7((Simpan Hasil Timbang))
+        UC8((Filter Data per Hari/Bulan/Tahun))
+        UC9((Export Excel per Hari/Bulan/Tahun))
+        UC10((Kirim Berat Aktual))
+    end
 
     Admin --> UC1
     Admin --> UC2
@@ -31,12 +31,12 @@ usecaseDiagram
     Admin --> UC8
     Admin --> UC9
 
-    UC4 --> UC5 : "<<include>>"
-    UC4 --> UC6 : "<<include>>"
-    UC4 --> UC7 : "<<include>>"
+    UC4 -. include .-> UC5
+    UC4 -. include .-> UC6
+    UC4 -. include .-> UC7
 
     Device --> UC10
-    UC10 --> UC7 : "<<update>>"
+    UC10 -. update .-> UC7
 ```
 
 ---
@@ -268,4 +268,3 @@ stateDiagram-v2
     Pending --> Approved: Admin set manual bila diperlukan
     Approved --> [*]
 ```
-
