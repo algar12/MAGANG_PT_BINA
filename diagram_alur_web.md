@@ -90,27 +90,103 @@ sequenceDiagram
     actor Admin as Admin / Operator
     participant UI as Filament Panel
     participant PC as ProductionCostingResource
-    participant Create as CreateProductionCosting
+    participant Service as ProductionCostingService
     participant DB as Database
 
+    %% Buka halaman
     Admin->>UI: Buka menu Mulai Menimbang
-    UI->>PC: Render form create
-    PC->>DB: Ambil daftar Material aktif
-    DB-->>PC: Data Bahan Baku
-    PC-->>UI: Tampilkan pilihan Bahan Baku dan Device
+    activate UI
+    UI->>PC: Request halaman create
+    activate PC
 
-    Admin->>UI: Pilih Bahan Baku, Device, Status
-    Admin->>UI: Klik Create
-    UI->>Create: Kirim data form
+    %% Load data awal
+    PC->>DB: Ambil Material aktif
+    activate DB
+    DB-->>PC: Data Material
+    deactivate DB
 
-    Create->>DB: Ambil Material berdasarkan material_id
-    Create->>DB: Cari / buat Formula Default internal
-    Create->>DB: Cari / buat BOM Item internal
-    Create->>Create: Generate nomor TMB-YYYYMMDD-0001
-    Create->>DB: Buat Production Order otomatis
-    Create->>DB: Simpan Production Costing
-    DB-->>Create: Data tersimpan
-    Create-->>UI: Redirect ke daftar Mulai Menimbang
+    PC->>DB: Ambil Device tersedia
+    activate DB
+    DB-->>PC: Data Device
+    deactivate DB
+
+    PC-->>UI: Render form create
+    deactivate PC
+    deactivate UI
+
+    %% Input user
+    Admin->>UI: Pilih Material, Device, Status
+    Admin->>UI: Klik tombol Create
+
+    %% Submit form
+    activate UI
+    UI->>Service: Kirim data form
+    deactivate UI
+    activate Service
+
+    %% Validasi
+    Service->>Service: Validasi data input
+
+    alt Data valid
+        %% Ambil data relasi
+        Service->>DB: Ambil Material by ID
+        activate DB
+        DB-->>Service: Data Material
+        deactivate DB
+
+        %% Formula
+        Service->>DB: Cari Formula Default
+        activate DB
+        DB-->>Service: Formula ditemukan / null
+        deactivate DB
+
+        alt Formula tidak ada
+            Service->>DB: Buat Formula Default
+            activate DB
+            DB-->>Service: Formula baru
+            deactivate DB
+        end
+
+        %% BOM
+        Service->>DB: Cari BOM Item
+        activate DB
+        DB-->>Service: BOM ditemukan / null
+        deactivate DB
+
+        alt BOM tidak ada
+            Service->>DB: Buat BOM Item
+            activate DB
+            DB-->>Service: BOM baru
+            deactivate DB
+        end
+
+        %% Generate nomor
+        Service->>Service: Generate nomor TMB-YYYYMMDD-XXXX
+
+        %% Production Order
+        Service->>DB: Buat Production Order
+        activate DB
+        DB-->>Service: PO tersimpan
+        deactivate DB
+
+        %% Simpan costing
+        Service->>DB: Simpan Production Costing
+        activate DB
+        DB-->>Service: Data tersimpan
+        deactivate DB
+
+        %% Response sukses
+        Service-->>UI: Success + Redirect
+    else Data tidak valid
+        Service-->>UI: Error validasi
+    end
+
+    deactivate Service
+
+    %% Redirect
+    activate UI
+    UI-->>Admin: Tampilkan daftar Mulai Menimbang
+    deactivate UI
 ```
 
 ---
