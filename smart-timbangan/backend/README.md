@@ -1,66 +1,91 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Smart Timbangan - Backend (Laravel + React)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi ini adalah sistem *backend* dan *dashboard operator* untuk Proyek Smart Timbangan IoT. 
+Sistem ini menggunakan Laravel 11 sebagai API dan Filament Panel, serta React.js untuk *real-time dashboard* operator timbangan.
 
-## About Laravel
+## Arsitektur Sistem
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. **Database:** MySQL
+2. **Backend API & Admin Panel:** Laravel 11 + Filament v3
+3. **Frontend Operator:** React.js (tertanam dalam Laravel Blade)
+4. **Real-time Engine:** Laravel Reverb (WebSocket)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Alur Kerja (Real-Time)
+- **ESP32 IoT** mengirim data berat sensor secara konstan setiap 1 detik melalui HTTP POST ke `/api/sensor/weight`.
+- **Laravel** memproses data tersebut, menyimpannya ke tabel *Production Costing* jika ada BOM (Bill of Materials) yang *Pending*, atau menyimpannya di Cache jika tidak.
+- **Laravel Reverb** mem-*broadcast* (push) data tersebut ke channel WebSocket secara instan.
+- **React Frontend (Operator Dashboard)** yang sudah *subscribe* ke channel WebSocket tersebut akan langsung memperbarui UI (angka berat dan tabel BOM) tanpa perlu me-*refresh* halaman.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Persyaratan Sistem
 
-## Learning Laravel
+- PHP 8.2 atau lebih baru
+- Composer
+- Node.js & npm (untuk *build* React)
+- MySQL Server
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Instalasi & Konfigurasi
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+1. **Install dependensi PHP & Node.js:**
+   ```bash
+   composer install
+   npm install
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2. **Konfigurasi Environment:**
+   Pastikan file `.env` sudah diatur, khususnya bagian database dan Reverb:
+   ```env
+   APP_ENV=local
+   APP_DEBUG=true
+   DB_CONNECTION=mysql
+   DB_DATABASE=smart_timbangan
+   
+   BROADCAST_CONNECTION=reverb
+   REVERB_APP_ID=553504
+   REVERB_APP_KEY=f1ehwd6zjxppjtoegquz
+   REVERB_APP_SECRET=ve3vgisudcqpw4b6xrbi
+   REVERB_HOST="localhost"
+   REVERB_PORT=8080
+   REVERB_SCHEME=http
+   ```
 
-## Laravel Sponsors
+3. **Migrasi Database:**
+   ```bash
+   php artisan migrate
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+4. **Build Frontend (React):**
+   ```bash
+   npm run build
+   ```
+   *(Atau `npm run dev` jika sedang dalam tahap pengembangan UI Frontend)*
 
-### Premium Partners
+## Cara Menjalankan Aplikasi
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Sistem ini membutuhkan **2 proses yang berjalan bersamaan** agar fitur *real-time* berfungsi:
 
-## Contributing
+**Terminal 1 (Backend Web Server):**
+Menjalankan REST API dan antarmuka web.
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+*(Gunakan opsi `--host=0.0.0.0` agar ESP32 dan perangkat lain di jaringan lokal bisa mengakses API).*
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Terminal 2 (WebSocket Server):**
+Menjalankan Laravel Reverb untuk mendengarkan dan mendistribusikan *event real-time*.
+```bash
+php artisan reverb:start --host=0.0.0.0 --port=8080
+```
 
-## Code of Conduct
+## Akses Aplikasi
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- **Halaman Utama & Login Operator:** `http://localhost:8000/`
+- **Panel Admin (Filament):** `http://localhost:8000/admin`
+  - *Catatan: Hanya akun dengan role `admin` yang dapat mengakses `/admin`.*
 
-## Security Vulnerabilities
+## Struktur Folder Penting
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- `app/Http/Controllers/DeviceController.php` - Endpoint API untuk menerima data dari ESP32.
+- `app/Events/` - Berisi class Event (`WeightReceived`, `CostingUpdated`) untuk *broadcast* ke WebSocket.
+- `resources/js/components/` - Seluruh komponen UI React untuk Dashboard Operator.
+- `resources/views/welcome.blade.php` - Halaman *landing* utama (Pilih login).
+- `routes/api.php` - Daftar semua rute API yang digunakan IoT dan React.
