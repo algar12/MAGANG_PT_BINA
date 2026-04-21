@@ -1,213 +1,210 @@
-# 📊 Diagram UML & Flowchart
-## Smart Timbangan Otomatis — Berbasis IoT + Computer Vision
+# Kumpulan Diagram UML & Flowchart
+**Sistem Timbangan Industrial IoT untuk Bill of Materials (BOM) Produksi**
+
+Dokumen ini berisi arsitektur sistem terkini berdasarkan implementasi aktual. ESP32 berkomunikasi langsung dengan Laravel 11 (Filament v3) untuk memproses penimbangan *Batching* sesuai resep/formula BOM. Stack: **Laravel 11 + Filament v3 + MySQL + Laravel Sanctum + ESP32 (HX711)**.
 
 ---
 
-## 1. 🎭 Use Case Diagram
+## 1. 🏗️ Arsitektur Sistem (Deployment Diagram)
 
 ```mermaid
 graph TD
-    subgraph Actors
-        O(["👤 Operator"])
-        A(["👑 Admin"])
-        E(["🔌 ESP32 Device"])
-        AI(["🤖 AI Server"])
+    subgraph "Lantai Produksi (Industrial Edge)"
+        A[Load Cell / Sensor Berat] -->|Sinyal Analog| B(Modul ADC HX711)
+        B -->|Sinyal Digital| C{Mikrokontroler ESP32}
+        C -->|HTTP POST /api/sensor/weight| E((Jaringan WiFi Lokal))
+        D[Tombol TARE / Operator] -->|Digital Input| C
     end
 
-    subgraph "Smart Timbangan System"
-        UC1["Letakkan Barang di Timbangan"]
-        UC2["Baca & Kirim Data Berat"]
-        UC3["Ambil Gambar via Kamera"]
-        UC4["Deteksi Jenis Barang (YOLO)"]
-        UC5["Hitung Harga Otomatis"]
-        UC6["Tampilkan Hasil di Dashboard"]
-        UC7["Konfirmasi / Batalkan Transaksi"]
-        UC8["Kelola Data Produk & Harga"]
-        UC9["Lihat Laporan & Histori"]
-        UC10["Monitoring Device & Kalibrasi"]
-        UC11["Export Data Transaksi"]
+    subgraph "Server (Laravel 11 + Filament v3)"
+        E -->|JSON Payload| F[REST API\nDeviceController]
+        F <--> G[(MySQL 8.0 Database)]
+        F -->|Update Costing| H[ProductionCosting\nModel]
+        F -->|Cache Berat Live| I[(Laravel Cache\nscale_{device_id})]
+
+        subgraph "Filament Admin Panel"
+            J[Master Data\nMaterial & Device]
+            K[Formula / BOM\nFormulaResource]
+            L[Production Order\nProductionOrderResource]
+            M[Production Costing\nProductionCostingResource]
+            N[Dashboard Widgets\nStatsOverview &\nLatestProductionActivity]
+        end
+
+        G <--> J
+        G <--> K
+        G <--> L
+        G <--> M
     end
 
-    O --> UC1
-    O --> UC7
-    O --> UC6
-    O --> UC9
+    subgraph "Workstation Operator / Supervisor"
+        O[Browser PC/Tablet] <-->|HTTPS + Filament UI| F
+        O -..->|AJAX Polling /api/costing-live/{id}| F
+        O -..->|Live Update Tabel Costing| M
+    end
 
-    A --> UC8
-    A --> UC9
-    A --> UC10
-    A --> UC11
-    A --> UC7
+    classDef hardware fill:#f9a8d4,stroke:#be185d,stroke-width:2px;
+    classDef software fill:#bfdbfe,stroke:#1d4ed8,stroke-width:2px;
+    classDef database fill:#bbf7d0,stroke:#15803d,stroke-width:2px;
+    classDef network fill:#fef08a,stroke:#a16207,stroke-width:2px;
+    classDef filament fill:#e9d5ff,stroke:#7e22ce,stroke-width:2px;
 
-    E --> UC2
-    E --> UC3
-
-    AI --> UC4
-    AI --> UC5
-
-    UC2 --> UC4
-    UC3 --> UC4
-    UC4 --> UC5
-    UC5 --> UC6
+    class A,B,C,D hardware;
+    class F,H,J,K,L,M,N software;
+    class G,I database;
+    class E network;
+    class O filament;
 ```
 
 ---
 
-## 2. 🔄 Activity Diagram — Alur Utama Sistem
+## 2. 🚶‍♂️ Flowchart Sistem (Alur Penimbangan BOM)
 
 ```mermaid
-flowchart TD
-    Start(["🟢 Mulai"])
-    A["Operator meletakkan barang\ndi atas timbangan"]
-    B["ESP32 membaca data berat\ndari sensor Load Cell + HX711"]
-    C{Berat stabil\n≥ threshold?}
-    D["ESP32 mengirim data berat\nke server via HTTP/JSON"]
-    E["Kamera mengambil\ngambar barang"]
-    F["OpenCV memproses\ngambar (resize, normalize)"]
-    G["YOLOv8 mendeteksi\njenis barang"]
-    H{Confidence\n≥ 70%?}
-    I["Tandai sebagai 'Tidak Dikenal'\n(Unknown)"]
-    J["Ambil harga dari\ndatabase Laravel"]
-    K["Hitung total harga:\nBerat × Harga/kg"]
-    L["Simpan ke database\n(weighing_sessions)"]
-    M["Tampilkan hasil di\ndashboard real-time"]
-    N{Operator\nkonfirmasi?}
-    O["Update status → 'confirmed'\nSimpan ke transactions"]
-    P["Update status → 'cancelled'\nHapus sesi"]
-    End1(["🔴 Selesai — Transaksi Berhasil"])
-    End2(["🔴 Selesai — Dibatalkan"])
-    Wait["Tunggu berat stabil\n(retry setiap 500ms)"]
+graph TD
+    Start(["Mulai Sesi Produksi"])
 
-    Start --> A
-    A --> B
-    B --> C
-    C -- "Tidak" --> Wait
-    Wait --> B
-    C -- "Ya" --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-    H -- "Ya" --> J
-    H -- "Tidak" --> I
-    I --> M
-    J --> K
-    K --> L
+    A["Supervisor/Operator Login\nke Filament Admin Panel"]
+    B["Supervisor membuat Production Order\n(Pilih Formula, Qty Batch, Tanggal)"]
+    C["System auto-generate Production Costings\nper BOM Item dari Formula"]
+    D["Status Order: 'In Progress'\nOperator buka halaman Costing"]
+
+    E["Operator melihat daftar bahan (BOM Items)\ndengan Netto Target & Status 'Pending'"]
+    F["Operator meletakkan wadah di timbangan\n& tekan tombol TARE di ESP32"]
+    G["ESP32 me-reset pembacaan menjadi 0"]
+
+    H["Operator menuang bahan ke timbangan"]
+    I["ESP32 baca HX711 secara kontinu"]
+    J{"Berat\nStabil?"}
+
+    I --> J
+    J -- "Belum" --> I
+
+    J -- "Ya" --> K["ESP32 kirim HTTP POST\nPOST /api/sensor/weight\n{device_id, weight}"]
+
+    L["DeviceController menerima data\nCek ProductionCosting status 'Pending'\nuntuk device tersebut"]
+
+    M{"Ada BOM\nPending?"}
     L --> M
-    M --> N
-    N -- "Konfirmasi" --> O
-    N -- "Batalkan" --> P
-    O --> End1
-    P --> End2
+
+    M -- "Ada" --> N["Update ProductionCosting:\nnetto_produksi = weight\nsub_cost_price = weight × price_bom\nstatus = 'Weighed'\nweighed_at = NOW()"]
+
+    M -- "Tidak Ada" --> O["Simpan ke Laravel Cache\ncache('scale_{device_id}', weight, 5 menit)"]
+
+    P["UI Operator di-refresh via\nAJAX Polling /api/costing-live/{order_id}\nsetiap 2 detik"]
+
+    Q["Tabel Costing update:\nkolom Netto Produksi & Sub Cost Price tampil"]
+
+    R{"Semua BOM Item\nstatus 'Weighed'?"}
+
+    S["Supervisor ubah status\nProduction Order → 'Completed'"]
+
+    N --> P --> Q --> R
+    R -- "Belum" --> E
+    R -- "Selesai" --> S
+    S --> End(["Selesai Sesi Produksi"])
+
+    Start --> A --> B --> C --> D --> E --> F --> G --> H
 ```
 
 ---
 
-## 3. 📡 Sequence Diagram — Interaksi Antar Komponen
+## 3. 🧑‍🤝‍🧑 Use Case Diagram
+
+```mermaid
+graph LR
+    subgraph Actors
+        SUP["👤 Supervisor / PPIC"]
+        OPR["👷 Operator Produksi"]
+        IOT["🔌 Perangkat IoT (ESP32)"]
+    end
+
+    subgraph "Sistem Laravel + Filament"
+        UC1["Kelola Master Data Material"]
+        UC2["Kelola Master Data Device (Timbangan)"]
+        UC3["Kelola Formula / BOM"]
+        UC4["Buat & Kelola Production Order"]
+        UC5["Lihat Dashboard & Statistik"]
+        UC6["Lihat & Monitor Production Costing"]
+        UC7["Export Laporan Costing (Excel)"]
+        UC8["Kirim Data Berat ke API\nPOST /api/sensor/weight"]
+        UC9["Ambil Live Costing\nGET /api/costing-live/{id}"]
+    end
+
+    SUP --> UC1
+    SUP --> UC2
+    SUP --> UC3
+    SUP --> UC4
+    SUP --> UC5
+    SUP --> UC6
+    SUP --> UC7
+
+    OPR --> UC5
+    OPR --> UC6
+    OPR --> UC9
+
+    IOT --> UC8
+    UC8 -.->|update otomatis| UC6
+```
+
+---
+
+## 4. ⏱️ Sequence Diagram (Alur Penimbangan Aktual)
 
 ```mermaid
 sequenceDiagram
-    actor Op as 👤 Operator
-    participant ESP as 🔌 ESP32
-    participant AI as 🤖 AI Server (Python)
-    participant Cam as 📷 Kamera
-    participant API as 🌐 Laravel API
-    participant DB as 🗄️ MySQL
-    participant UI as 💻 Dashboard Web
+    actor SUP as Supervisor
+    actor OPR as Operator
+    participant UI as Browser (Filament UI)
+    participant API as Laravel API
+    participant DB as MySQL Database
+    participant CACHE as Laravel Cache
+    participant ESP as ESP32 + HX711
 
-    Op->>ESP: Letakkan barang di timbangan
-    
-    loop Baca berat setiap 500ms
-        ESP->>ESP: Baca data HX711
+    SUP->>UI: Buat Production Order (pilih Formula, qty_order)
+    UI->>API: POST /filament/production-orders (form submit)
+    API->>DB: INSERT production_orders
+    API->>DB: INSERT production_costings (generate per BOM item)
+    Note over API,DB: netto_target = bom.netto_target × qty_order<br/>price_bom = material.standart_cost<br/>sub_price = netto_target × price_bom<br/>status = 'Pending'
+    DB-->>API: Success
+    API-->>UI: Redirect ke halaman Costing
+
+    OPR->>UI: Buka halaman Production Costing
+    UI->>API: GET /api/costing-live/{order_id}
+    API->>DB: SELECT production_costings WHERE order_id = ?
+    DB-->>API: Data costings (status: Pending)
+    API-->>UI: JSON costings
+    UI->>UI: Render tabel BOM Items + Target Netto
+
+    loop Penimbangan Real-time
+        OPR->>ESP: Tuang bahan ke timbangan
+        ESP->>ESP: Baca HX711, filter sinyal stabil
+        ESP->>API: POST /api/sensor/weight {device_id, weight}
+        API->>DB: SELECT devices WHERE device_id = ?
+        DB-->>API: Device record
+
+        alt Ada ProductionCosting status 'Pending' untuk device ini
+            API->>DB: UPDATE production_costings SET<br/>netto_produksi=weight, status='Weighed',<br/>sub_cost_price=weight×price_bom, weighed_at=NOW()
+            DB-->>API: Updated
+            API-->>ESP: 200 OK {success: true, message: "Saved to BOM"}
+        else Tidak ada BOM Pending
+            API->>CACHE: cache.put('scale_{device_id}', weight, 5min)
+            API-->>ESP: 200 OK {success: true, message: "Weight cached"}
+        end
+
+        OPR->>UI: (AJAX Polling tiap 2 detik)
+        UI->>API: GET /api/costing-live/{order_id}
+        API->>DB: SELECT production_costings
+        DB-->>API: Updated costings
+        API-->>UI: JSON dengan netto_produksi & sub_cost_price terbaru
+        UI->>UI: Update tabel (tampilkan berat aktual & biaya)
     end
 
-    ESP->>AI: POST /api/weight {device_id, weight_kg}
-    
-    AI->>Cam: Capture frame
-    Cam-->>AI: Return image frame
-    
-    AI->>AI: Preprocess gambar (OpenCV)
-    AI->>AI: Inferensi YOLOv8
-    AI->>AI: Gabungkan: jenis_barang + weight_kg
-    
-    AI->>API: POST /api/weighing-session {product_class, weight, confidence}
-    API->>DB: Query harga produk berdasarkan kelas YOLO
-    DB-->>API: Return data produk & harga
-    API->>API: Hitung total_price = weight × price_per_kg
-    API->>DB: INSERT weighing_sessions
-    DB-->>API: Return session_id
-    API-->>AI: Return {session_id, status: "pending"}
-    AI-->>ESP: ACK (data diterima)
-    
-    API->>UI: Push realtime via WebSocket/Polling
-    UI-->>Op: Tampilkan: nama_barang, berat, harga_total
-    
-    Op->>UI: Klik "Konfirmasi Transaksi"
-    UI->>API: PATCH /api/transactions/{session_id}/confirm
-    API->>DB: UPDATE status = 'confirmed'\nINSERT transactions
-    DB-->>API: OK
-    API-->>UI: Return {status: "success"}
-    UI-->>Op: Tampilkan notifikasi "Transaksi Berhasil ✅"
-```
-
----
-
-## 4. 🏗️ Component Diagram — Arsitektur Sistem
-
-```mermaid
-graph TB
-    subgraph "⚙️ Hardware Layer"
-        LC["Load Cell\n(Sensor Berat)"]
-        HX["HX711\n(ADC Module)"]
-        ESP["ESP32\n(WiFi MCU)"]
-        CAM["Kamera\n(Webcam / IP Cam)"]
-        LC --> HX --> ESP
-    end
-
-    subgraph "🤖 AI Processing Server (Python)"
-        CV["OpenCV\n(Frame Capture)"]
-        YOLO["YOLOv8\n(Object Detection)"]
-        PROC["Data Processor\n(Merge weight + object)"]
-        CAM --> CV --> YOLO --> PROC
-        ESP --"HTTP POST /weight"--> PROC
-    end
-
-    subgraph "🌐 Backend (Laravel 11)"
-        ROUTES["API Routes"]
-        CTRL["Controllers"]
-        MODEL["Eloquent Models"]
-        QUEUE["Queue Jobs\n(Async)"]
-        ROUTES --> CTRL --> MODEL
-        CTRL --> QUEUE
-    end
-
-    subgraph "🗄️ Database (MySQL)"
-        TB1["products"]
-        TB2["weighing_sessions"]
-        TB3["transactions"]
-        TB4["users"]
-        TB5["device_logs"]
-    end
-
-    subgraph "💻 Frontend (Dashboard Web)"
-        DASH["Dashboard\n(Real-time)"]
-        MGMT["Manajemen Produk"]
-        HIST["Histori Transaksi"]
-        RPT["Laporan & Grafik"]
-        MON["Device Monitor"]
-    end
-
-    PROC --"HTTP POST /api/weighing-session"--> ROUTES
-    MODEL <--> TB1
-    MODEL <--> TB2
-    MODEL <--> TB3
-    MODEL <--> TB4
-    MODEL <--> TB5
-    CTRL --"JSON Response"--> DASH
-    CTRL --> MGMT
-    CTRL --> HIST
-    CTRL --> RPT
-    CTRL --> MON
+    SUP->>UI: Verifikasi semua BOM Item selesai
+    SUP->>UI: Ubah status Production Order → 'Completed'
+    UI->>API: PATCH production_orders/{id}
+    API->>DB: UPDATE status = 'Completed', end_date = TODAY()
+    DB-->>API: Success
+    API-->>UI: Order selesai
 ```
 
 ---
@@ -221,198 +218,175 @@ erDiagram
         varchar name
         varchar email
         varchar password
-        enum role
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
+        enum role "default: operator"
+        timestamps created_at
     }
 
-    CATEGORIES {
+    MATERIALS {
         bigint id PK
-        varchar name
-        varchar slug
-        timestamp created_at
-        timestamp updated_at
+        varchar kode_produk UK
+        varchar nama_produk
+        varchar uom_dasar "default: GRAM"
+        decimal standart_cost
+        boolean is_active "default: true"
+        timestamps created_at
     }
 
-    PRODUCTS {
+    FORMULAS {
         bigint id PK
-        bigint category_id FK
-        varchar name
-        varchar yolo_class
-        decimal price_per_kg
-        varchar unit
-        varchar image_path
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
+        varchar formula_code UK
+        varchar formula_name
+        varchar mix_kategory "nullable"
+        boolean status "default: true"
+        bigint created_by FK
+        timestamps created_at
+    }
+
+    BOM_ITEMS {
+        bigint id PK
+        bigint formula_id FK
+        bigint material_id FK
+        decimal bom_konversi_qty "default: 1.00"
+        varchar bom_konversi_uom
+        decimal netto_target
+        varchar mix_id "nullable"
+        boolean is_optional "default: false"
+        bigint created_by FK
+        timestamps created_at
     }
 
     DEVICES {
         bigint id PK
-        varchar device_id
+        varchar device_id UK
         varchar name
-        varchar location
-        varchar firmware_version
-        timestamp last_online_at
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
+        varchar location "nullable"
+        boolean is_active "default: true"
+        timestamps created_at
     }
 
-    WEIGHING_SESSIONS {
+    PRODUCTION_ORDERS {
         bigint id PK
-        bigint device_id FK
-        bigint product_id FK
-        decimal weight_kg
-        decimal raw_weight_data
-        varchar detected_class
-        decimal confidence_score
-        varchar detected_image
-        decimal price_per_kg
-        decimal total_price
-        enum status
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    TRANSACTIONS {
-        bigint id PK
-        bigint session_id FK
+        varchar order_number UK
+        bigint formula_id FK
+        int qty_order "default: 1"
+        date start_date
+        date end_date "nullable"
+        enum status "Draft|In Progress|Completed|Cancelled"
         bigint operator_id FK
-        varchar invoice_number
-        enum payment_method
-        decimal total_amount
-        decimal amount_paid
-        decimal change_amount
-        text notes
-        timestamp created_at
-        timestamp updated_at
+        timestamps created_at
     }
 
-    DEVICE_LOGS {
+    PRODUCTION_COSTINGS {
         bigint id PK
-        bigint device_id FK
-        decimal raw_weight
-        smallint signal_strength
-        varchar ip_address
-        enum log_type
-        text message
-        timestamp created_at
+        bigint production_order_id FK
+        bigint bom_item_id FK
+        bigint device_id FK "nullable"
+        decimal netto_target "dari BOM × qty_order"
+        decimal netto_produksi "nullable - berat aktual IoT"
+        decimal price_bom "harga standar saat order dibuat"
+        decimal sub_price "nullable - netto_target × price_bom"
+        decimal sub_cost_price "nullable - netto_produksi × price_bom"
+        enum status "Pending|Weighed|Approved"
+        timestamp weighed_at "nullable"
+        timestamps created_at
     }
 
-    PRICE_HISTORIES {
-        bigint id PK
-        bigint product_id FK
-        bigint changed_by FK
-        decimal old_price
-        decimal new_price
-        varchar reason
-        timestamp created_at
-    }
+    USERS ||--o{ FORMULAS : "membuat (created_by)"
+    USERS ||--o{ PRODUCTION_ORDERS : "mengerjakan (operator_id)"
+    USERS ||--o{ BOM_ITEMS : "membuat (created_by)"
 
-    CATEGORIES ||--o{ PRODUCTS          : "memiliki"
-    PRODUCTS   ||--o{ WEIGHING_SESSIONS : "teridentifikasi dalam"
-    DEVICES    ||--o{ WEIGHING_SESSIONS : "menghasilkan"
-    DEVICES    ||--o{ DEVICE_LOGS       : "mencatat log"
-    WEIGHING_SESSIONS ||--|| TRANSACTIONS  : "dikonfirmasi menjadi"
-    USERS      ||--o{ TRANSACTIONS      : "dikonfirmasi oleh"
-    PRODUCTS   ||--o{ PRICE_HISTORIES   : "memiliki riwayat harga"
-    USERS      ||--o{ PRICE_HISTORIES   : "diubah oleh"
+    FORMULAS ||--o{ BOM_ITEMS : "terdiri dari"
+    MATERIALS ||--o{ BOM_ITEMS : "dipakai di"
+
+    FORMULAS ||--o{ PRODUCTION_ORDERS : "diproduksi melalui"
+    PRODUCTION_ORDERS ||--o{ PRODUCTION_COSTINGS : "memiliki rincian biaya"
+    BOM_ITEMS ||--o{ PRODUCTION_COSTINGS : "menjadi target timbang"
+    DEVICES ||--o{ PRODUCTION_COSTINGS : "menimbang aktual (nullable)"
 ```
 
 ---
 
-## 6. 🔁 State Diagram — Status Sesi Penimbangan
+## 6. 📦 Struktur Komponen (Component Diagram)
+
+```mermaid
+graph TB
+    subgraph "smart-timbangan/backend (Laravel 11)"
+        subgraph "Filament Admin Panel (Port 80)"
+            FA["FormulaResource\n(Master Formula/BOM)"]
+            FB["BomItemResource\n(Detail BOM per Formula)"]
+            FC["MaterialResource\n(Master Bahan Baku)"]
+            FD["DeviceResource\n(Master Timbangan IoT)"]
+            FE["ProductionOrderResource\n(Kelola Order Produksi)"]
+            FF["ProductionCostingResource\n(Monitor & Set Timbang)"]
+            FG["UserResource\n(Kelola User & Role)"]
+            FH["StatsOverview Widget\n(Statistik Total)"]
+            FI["LatestProductionActivity Widget\n(Order Terbaru)"]
+            FJ["Exports\n(Excel Export Costing)"]
+        end
+
+        subgraph "REST API (Laravel Sanctum)"
+            AC["DeviceController\nPOST /api/sensor/weight"]
+            PC["ProductionController\nGET /api/costing-live/{id}\nGET /production/costing/{id}"]
+        end
+
+        subgraph "Models (Eloquent ORM)"
+            M1[User]
+            M2[Material]
+            M3[Formula]
+            M4[BomItem]
+            M5[Device]
+            M6[ProductionOrder]
+            M7[ProductionCosting]
+        end
+
+        subgraph "Database"
+            DB[(MySQL 8.0)]
+        end
+
+        AC --> M5
+        AC --> M7
+        PC --> M6
+        PC --> M7
+        M1 & M2 & M3 & M4 & M5 & M6 & M7 --> DB
+    end
+
+    subgraph "Hardware Layer"
+        ESP32["ESP32\nFirmware C++"]
+        HX711["HX711 ADC\nLoad Cell"]
+        HX711 --> ESP32
+    end
+
+    ESP32 -->|"POST /api/sensor/weight"| AC
+    Browser["Browser (PC/Tablet)"] -->|HTTPS| FA & FB & FC & FD & FE & FF & FG
+    Browser -->|AJAX Polling| PC
+```
+
+---
+
+## 7. 🔄 State Diagram (Siklus Hidup Production Order & Costing)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Idle : Sistem aktif
+    [*] --> Draft : Supervisor buat\nProduction Order
 
-    Idle --> Detecting : Barang diletakkan\n(berat terdeteksi)
+    Draft --> InProgress : Supervisor mulai order\n(Costings di-generate otomatis)
+    Draft --> Cancelled : Dibatalkan
 
-    Detecting --> Processing : ESP32 kirim data berat\n+ kamera ambil gambar
+    InProgress --> Completed : Semua BOM Item\nstatus 'Weighed'
+    InProgress --> Cancelled : Dibatalkan
 
-    Processing --> Pending : AI selesai deteksi\n& hitung harga
+    Completed --> [*]
+    Cancelled --> [*]
 
-    Pending --> Confirmed : Operator klik "Konfirmasi"
-    Pending --> Cancelled : Operator klik "Batalkan"
-    Pending --> Timeout : Tidak ada aksi > 60 detik
+    state InProgress {
+        [*] --> Pending : Costing di-generate
+        Pending --> Weighed : ESP32 kirim berat\nDeviceController update
+        Weighed --> Approved : Supervisor verifikasi
+        Approved --> [*]
+    }
 
-    Confirmed --> [*] : Transaksi tersimpan ✅
-    Cancelled --> Idle : Kembali ke standby
-    Timeout --> Idle : Auto-reset ke standby
-
-    Processing --> Error : Deteksi gagal /\nkoneksi terputus
-    Error --> Idle : Retry / Reset manual
+    note right of InProgress
+        Status Costing per BOM Item:
+        Pending → Weighed → Approved
+    end note
 ```
-
----
-
-## 7. 📶 Deployment Diagram — Topologi Jaringan
-
-```mermaid
-graph LR
-    subgraph "🏪 Lokasi Fisik (Timbangan)"
-        HW["ESP32 + Load Cell\n+ HX711"]
-        CAM2["Kamera USB/WiFi"]
-    end
-
-    subgraph "💻 Local Server / PC"
-        PY["Python AI Server\n(YOLOv8 + OpenCV)\n:5000"]
-        LAR["Laravel Web Server\n(PHP + MySQL)\n:8000"]
-        DB2["MySQL Database\n:3306"]
-        LAR <--> DB2
-    end
-
-    subgraph "🌐 Client Browser"
-        BR["Dashboard Web\n(Browser Operator / Admin)"]
-    end
-
-    HW --"WiFi / HTTP POST"--> PY
-    CAM2 --"USB / RTSP stream"--> PY
-    PY --"HTTP POST /api"--> LAR
-    BR --"HTTP / WebSocket"--> LAR
-    LAR --"JSON Response"--> BR
-```
-
----
-
-## 8. 🔧 Flowchart Training Model YOLOv8
-
-```mermaid
-flowchart TD
-    S(["🟢 Mulai Training"])
-    A["Kumpulkan dataset gambar\n(buah & sayuran)"]
-    B["Anotasi gambar dengan Roboflow\n(format YOLO bounding box)"]
-    C["Augmentasi data\n(rotasi, flip, brightness)"]
-    D["Split dataset\n80% train / 10% val / 10% test"]
-    E["Load pretrained YOLOv8m.pt\n(Transfer Learning)"]
-    F["Training model\nepochs=100, batch=16, imgsz=640"]
-    G["Evaluasi val set\n(mAP, Precision, Recall)"]
-    H{"mAP@50 ≥ 85%?"}
-    I["Hyperparameter tuning\n(learning rate, augmentation)"]
-    J["Evaluasi test set final"]
-    K["Export model\n(.pt → ONNX / TFLite)"]
-    L["Deploy ke AI Server\n(Python + FastAPI)"]
-    End(["🔴 Model Siap Digunakan"])
-
-    S --> A --> B --> C --> D --> E --> F --> G --> H
-    H -- "Belum" --> I --> F
-    H -- "Ya" --> J --> K --> L --> End
-```
-
----
-
-## 📌 Ringkasan Komponen Sistem
-
-| Layer | Komponen | Teknologi | Peran |
-|---|---|---|---|
-| **Hardware** | Sensor berat | Load Cell + HX711 | Membaca berat barang |
-| **Hardware** | Mikrokontroler | ESP32 | Kirim data via WiFi |
-| **Hardware** | Visual input | Kamera USB/IP | Ambil gambar barang |
-| **AI Server** | Object Detection | YOLOv8 + OpenCV | Identifikasi jenis barang |
-| **AI Server** | Data Processor | Python + FastAPI | Gabungkan data & kirim ke API |
-| **Backend** | REST API | Laravel 11 | Manajemen data & bisnis logic |
-| **Database** | Storage | MySQL 8.0 | Simpan semua data transaksi |
-| **Frontend** | Dashboard | Laravel Blade/Vue | Visualisasi real-time |
