@@ -20,7 +20,7 @@ graph TD
         E -->|JSON Payload| F[REST API\nDeviceController]
         F <--> G[(MySQL 8.0 Database)]
         F -->|Update Costing| H[ProductionCosting\nModel]
-        F -->|Cache Berat Live| I[(Laravel Cache\nscale_{device_id})]
+        F -->|Cache Berat Live| I[("Laravel Cache\nscale_{device_id}")]
 
         subgraph "Filament Admin Panel"
             J[Master Data\nMaterial & Device]
@@ -38,7 +38,7 @@ graph TD
 
     subgraph "Workstation Operator / Supervisor"
         O[Browser PC/Tablet] <-->|HTTPS + Filament UI| F
-        O -..->|AJAX Polling /api/costing-live/{id}| F
+        O -..->|"AJAX Polling /api/costing-live/{id}"| F
         O -..->|Live Update Tabel Costing| M
     end
 
